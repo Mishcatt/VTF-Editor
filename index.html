@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>VTF Spray Converter</title>
+<link rel="shortcut icon" href="favicon.ico" />
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="vtf.css" />
+</head>
+<body>
+<h4>VTF Spray Converter for TF2</h4>
+<br />
+<input type="file" id="files" name="files[]" accept="image/*" onchange="handleFileSelect(event)" />
+<br /><br />
+Works best with same size images (with transparency or not).<br />
+Smaller images will be centered.<br />
+To generate a fading spray enable mipmaps, load a main picture, click "convert",<br />
+and then choose another picture under a mipmap of choice.<br />
+To download final spray click "Save as VTF".<br /><br />
+<span style="color: #cc3333">Transparency is broken in Linux version of TF2!</span><br />
+<div id="resolutionNotice">Using 1024x1020, no mipmaps</div>
+<select class="textInput" value="1024" id="widthSetting" onchange="setResolution()">
+	<option value=1024>1024</option>
+	<option value=512>512</option>
+	<option value=256>256</option>
+	<option value=128>128</option>
+	<option value=64>64</option>
+	<option value=32>32</option>
+	<option value=16>16</option>
+	<option value=8>8</option>
+	<option value=4>4</option>
+</select>
+ x 
+<select class="textInput" value="1024" id="heightSetting" onchange="setResolution()">
+	<option value=1024>1024</option>
+	<option value=512>512</option>
+	<option value=256>256</option>
+	<option value=128>128</option>
+	<option value=64>64</option>
+	<option value=32>32</option>
+	<option value=16>16</option>
+	<option value=8>8</option>
+	<option value=4>4</option>
+</select>
+<br />
+<input type="checkbox" name="mipmaps" id="mipmapsCheck" disabled>Generate Mipmaps<br />
+<br /><br />
+<div class="setting">
+	Luma average:<br />
+	<form id="lumaavgform">
+		<input type="radio" name="lumaavg" value="average" checked>Average</input><br />
+		<input type="radio" name="lumaavg" value="square">RMS</input>
+	</form>
+</div>
+<div class="setting">
+	Luma threshold:<br />
+	<form id="lumathrform">
+		<input type="radio" name="lumathr" value="average">Average</input><br />
+		<input type="radio" name="lumathr" value="square" checked>RMS</input>
+	</form>
+</div>
+<div class="setting">
+	Brightness:<br />
+	<form id="brightnessform">
+		<input type="radio" name="brightness" value=0>-1</input>
+		<input type="radio" name="brightness" value=1 checked>0</input>
+		<input type="radio" name="brightness" value=2>+1</input>
+	</form>
+	<br />
+</div>
+<br /><br />
+<button id="convertButton" type="button" onclick="convert()" disabled>Convert</button> &nbsp; <button id="saveButton" type="button" onclick="createVTF()" disabled>Save as VTF</button><br />
+<br />
+Preview:
+<div id="contentWrapper">
+	<div class="input" id="inputWrapper"></div>
+	<canvas id="canvas"></canvas>
+	<canvas id="tempCanvas"></canvas>
+</div>
+<input type="file" id="files0" name="files[]" accept="image/*" onchange="changeMipmap(event,0)" disabled />
+<div id="mipmaps"></div>
+<br /><br />
+changelog:<br />
+2017-01-05: mipmap generation and modification (fading sprays)<br />
+2016-11-25: image scaling for disproportionate sprays<br />
+2016-11-24: added resolution settings, minor solid color changes<br />
+2016-11-22: added conversion settings<br />
+2016-11-21: fixed swapped blocks, improved color handling<br />
+2016-11-20: fixed color errors with almost-black blocks<br />
+<br />
+<script src="vtf.js" type="text/javascript"></script>
+</body>
+</head>

@@ -1,0 +1,85 @@
+body {
+	background-color: #b3b3b3;
+	text-align: center;
+}
+.createsetting {
+	display: inline-block;
+}
+.setting {
+	display: inline-block;
+	width: 120px;
+}
+.setting form {
+	text-align: left;
+}
+#resolutionNotice {
+	color: #888888;
+	display: block;
+	visibility: visible;
+}
+#brightnessform {
+	text-align: center;
+}
+#contentWrapper {
+	background: url("img/bg.gif");
+	background-position: 0 0;
+	border-bottom: 1px;
+	border-bottom-style: solid;
+	border-bottom-color: #c4c4c4;
+	border-right: 1px;
+	border-right-style: solid;
+	border-right-color: #c4c4c4;
+	border-left: 1px;
+	border-left-style: solid;
+	border-left-color: #a4a4a4;
+	border-top: 1px;
+	border-top-style: solid;
+	border-top-color: #a4a4a4;
+	position: relative;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	margin-left: auto;
+	margin-right: auto;
+	width: 1024px;
+	height: 1020px;
+}
+#mipmaps {
+	margin-left: auto;
+	margin-right: auto;
+}
+#mipmaps canvas {
+	background: url("img/bg.gif");
+	background-position: 0 0;
+	border-bottom: 1px;
+	border-bottom-style: solid;
+	border-bottom-color: #c4c4c4;
+	border-right: 1px;
+	border-right-style: solid;
+	border-right-color: #c4c4c4;
+	border-left: 1px;
+	border-left-style: solid;
+	border-left-color: #a4a4a4;
+	border-top: 1px;
+	border-top-style: solid;
+	border-top-color: #a4a4a4;
+}
+.mipmapElement {
+	margin-top: 20px;
+}
+.input {
+	display: block;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+}
+#canvas {
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+#tempCanvas {
+	visibility: hidden;
+}
