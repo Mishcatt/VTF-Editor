@@ -10,15 +10,18 @@
 <body>
 <h4>VTF Spray Converter for TF2</h4>
 <br />
-<input type="file" id="files" name="files[]" accept="image/*" onchange="handleFileSelect(event)" />
+<input type="file" id="files" name="files[]" accept="image/*,.tga" onchange="handleFileSelect(event)" multiple/>
 <br /><br />
 Works best with same size images (with transparency or not).<br />
 Smaller images will be centered.<br />
-To generate a fading spray enable mipmaps, load a main picture, click "convert",<br />
+To generate a fading spray enable mipmaps, load a main picture,<br />
 and then choose another picture under a mipmap of choice.<br />
+To generate an animated spray select multiple images in the file browser.<br />
+The frames are displayed in the same order as they appear in the file browser,<br />
+and each one lasts for 0.2s. Animated gifs are also supported.<br />
 To download final spray click "Save as VTF".<br /><br />
 <span style="color: #cc3333">Transparency is broken in Linux version of TF2!</span><br />
-<div id="resolutionNotice">Using 1024x1020, no mipmaps</div>
+<div id="resolutionNotice" style="visibility: hidden">Using 1024x1020, no mipmaps</div>
 <select class="textInput" value="1024" id="widthSetting" onchange="setResolution()">
 	<option value=1024>1024</option>
 	<option value=512>512</option>
@@ -43,8 +46,36 @@ To download final spray click "Save as VTF".<br /><br />
 	<option value=4>4</option>
 </select>
 <br />
-<input type="checkbox" name="mipmaps" id="mipmapsCheck" disabled>Generate Mipmaps<br />
-<br /><br />
+<input type="checkbox" name="mipmaps" id="mipmapsCheck" disabled onchange="showMipmap(this)">Generate Mipmaps<br />
+<input type="checkbox" name="rescale" id="rescaleCheck" onchange="check()" checked>Scale to fit<br />
+<input type="checkbox" name="respectGif" id="gifCheck" checked>Respect GIF timings<br />
+
+<input type="checkbox" name="singleFrame" id="singleFrame" onchange="setSingleFrame()">Use single image for animation<br />
+<p id="filesizee"></p>
+<p>Image Encode settings:</p>
+Texture format: <select class="textInput" value=13 id="format" onchange="setOutputType(this)">
+	<option value=0>RGBA8888</option>
+	<option value=2>RGB888</option>
+	<option value=4>RGB565</option>
+	<option value=21>BGRA5551</option>
+	<option value=19>BGRA4444</option>
+	<option value=13 selected>DXT1 (One bit alpha)</option>
+	<option value=15>DXT5</option>
+</select><br/>
+Sampling Method: <select class="textInput" value="0" id="sampling">
+	<option value=0>Default</option>
+	<option value=1>Point</option>
+	<option value=2>Trilinear</option>
+	<option value=16>Anisotropic</option>
+</select>
+
+<div id = "ditherBlock"><input type="checkbox" name="dither" id="ditherCheck" checked/>Use dithering</div>
+<div id = "dxtSettings" >
+Color matching: <select class="textInput" value="0" id="sampling" onchange="colorDifference = this.value">
+	<option value=0 selected>RGB difference</option>
+	<option value=1>Luminance</option>
+</select>
+<br/>
 <div class="setting">
 	Luma average:<br />
 	<form id="lumaavgform">
@@ -68,19 +99,24 @@ To download final spray click "Save as VTF".<br /><br />
 	</form>
 	<br />
 </div>
+
+</div>
 <br /><br />
-<button id="convertButton" type="button" onclick="convert()" disabled>Convert</button> &nbsp; <button id="saveButton" type="button" onclick="createVTF()" disabled>Save as VTF</button><br />
+<button id="convertButton" type="button" onclick="convert()" disabled>Convert</button> &nbsp; 
+<button id="saveButton" type="button" onclick="createVTF()" disabled>Save as VTF</button><br />
 <br />
 Preview:
 <div id="contentWrapper">
-	<div class="input" id="inputWrapper"></div>
-	<canvas id="canvas"></canvas>
+	<canvas id="preview"></canvas>
+	<canvas id="canvas" style="display: none"></canvas>
 	<canvas id="tempCanvas"></canvas>
+	<div id="frames"></div>
 </div>
 <input type="file" id="files0" name="files[]" accept="image/*" onchange="changeMipmap(event,0)" disabled multiple/>
-<div id="mipmaps"></div>
+<div id="mipmaps" style="display: none"></div>
 <br /><br />
 changelog:<br />
+2018-08-19: added animated spray support and new texture formats<br />
 2017-01-05: mipmap generation and modification (fading sprays)<br />
 2016-11-25: image scaling for disproportionate sprays<br />
 2016-11-24: added resolution settings, minor solid color changes<br />
@@ -88,6 +124,10 @@ changelog:<br />
 2016-11-21: fixed swapped blocks, improved color handling<br />
 2016-11-20: fixed color errors with almost-black blocks<br />
 <br />
+<script src="tga.js" type="text/javascript"></script>
+<script src="libgif.js" type="text/javascript"></script>
+<script src="dither.js" type="text/javascript"></script>
+<script src="quantize.js" type="text/javascript"></script>
 <script src="vtf.js" type="text/javascript"></script>
 </body>
 </head>
