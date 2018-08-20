@@ -115,13 +115,14 @@ setInterval(function(){
 }, 200);
 
 function handleFileSelect(evt) {
+	var files = evt.target.files; // FileList object
 	if (files.length == 0)
 		return;
 	document.getElementById('convertButton').disabled = true;
 	document.getElementById('saveButton').disabled = true;
 	document.getElementById('files0').disabled = true;
 	
-	var files = evt.target.files; // FileList object
+	
 	frameCount = files.length;
 	frames = [];
 	frames[0] = [];
