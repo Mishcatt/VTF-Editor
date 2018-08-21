@@ -12,7 +12,8 @@ body {
 	bottom: 0;
 	width: 200px;
 	text-align: center;
-	background-color: #FF0000;
+	font-size: 10px;
+	background-color: #c3c3c3;
 	border-right: 2px;
 	border-right-style: solid;
 	border-color: #000000;
@@ -41,7 +42,7 @@ body {
 input[type=file] {
 	width: 180px;
 	overflow: hidden;
-	background-color: #AA0000;
+	background-color: #a3a3a3;
 	border: 2px;
 	border-style: solid;
 	border-color: #000000;
@@ -64,7 +65,7 @@ input[type=file] {
 	font-size: 20px;
 }
 
-#downloadButton {
+#saveButton {
 	position: absolute;
 	bottom: 40px;
 	border: 2px;
@@ -83,7 +84,7 @@ input[type=file] {
 	right: 0;
 	top: 0;
 	bottom: 42px;
-	background-color: #0000FF;
+	background-color: #b3b3b3;
 	padding: 10px;
 	overflow: auto;
 	-moz-user-drag: none;
@@ -193,7 +194,8 @@ input[type=file] {
 	left: 202px;
 	width: 100%;
 	height: 40px;
-	background-color: #00FF00;
+	overflow: auto;
+	background-color: #c3c3c3;
 	border-top: 2px;
 	border-top-style: solid;
 	border-color: #000000;
