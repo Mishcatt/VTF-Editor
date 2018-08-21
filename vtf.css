@@ -30,6 +30,10 @@ body {
 	width: 100%;
 }
 
+#instructions {
+	display: none;
+}
+
 #fileSelect {
 	margin-top: 10px;
 }
