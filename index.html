@@ -11,14 +11,16 @@
 <div id="leftPanel">
 	<div id="title">VTF Editor 0.01</div>
 	<div id="fileSelect"><input type="file" id="files" name="files[]" accept="image/*,.tga,.vtf" onchange="handleFileSelect(event)" multiple/></div>
-	Works best with same size images (with transparency or not).<br />
-	Smaller images will be centered.<br />
-	To generate a fading spray enable mipmaps, load a main picture,<br />
-	and then choose another picture under a mipmap of choice.<br />
-	To generate an animated spray select multiple images in the file browser.<br />
-	The frames are displayed in the same order as they appear in the file browser,<br />
-	and each one lasts for 0.2s. Animated gifs are also supported.<br />
-	To download final spray click "Save as VTF".<br /><br />
+	<div id="instructions">
+		Works best with same size images (with transparency or not).<br />
+		Smaller images will be centered.<br />
+		To generate a fading spray enable mipmaps, load a main picture,<br />
+		and then choose another picture under a mipmap of choice.<br />
+		To generate an animated spray select multiple images in the file browser.<br />
+		The frames are displayed in the same order as they appear in the file browser,<br />
+		and each one lasts for 0.2s. Animated gifs are also supported.<br />
+		To download final spray click "Save as VTF".<br /><br />
+	</div>
 	<span style="color: #cc3333">Transparency is broken in Linux version of TF2!</span><br />
 	<div id="resolutionNotice" style="visibility: hidden">Using 1024x1020, no mipmaps</div>
 	<select class="textInput" value="1024" id="widthSetting" onchange="setResolution()">
