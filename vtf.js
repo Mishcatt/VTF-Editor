@@ -276,7 +276,7 @@ function createCanvas() { // put centered image on canvas
 
 function convert() {
 	blockPosition = 0;
-	document.body.style.cursor = "url(img/aero_derpy_busy.ani), wait";
+	document.body.style.cursor = "wait";
 	createCanvas();
 	blockCount = 0;
 	if (hasMipmaps)
