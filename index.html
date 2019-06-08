@@ -47,7 +47,7 @@ To download final spray click "Save as VTF".<br /><br />
 </select>
 <br />
 <input type="checkbox" name="mipmaps" id="mipmapsCheck" disabled onchange="showMipmap(this)">Generate Mipmaps<br />
-<input type="checkbox" name="rescale" id="rescaleCheck" onchange="check()" checked>Scale to fit<br />
+<input type="checkbox" name="rescale" id="rescaleCheck" onchange="setResolution()" checked>Scale to fit<br />
 <input type="checkbox" name="respectGif" id="gifCheck" checked>Respect GIF timings<br />
 
 <input type="checkbox" name="singleFrame" id="singleFrame" onchange="setSingleFrame()">Use single image for animation<br />
@@ -71,35 +71,16 @@ Sampling Method: <select class="textInput" value="0" id="sampling">
 
 <div id = "ditherBlock"><input type="checkbox" name="dither" id="ditherCheck" checked/>Use dithering</div>
 <div id = "dxtSettings" >
-Color matching: <select class="textInput" value="0" onchange="colorDifference = this.value">
-	<option value=0 selected>RGB difference</option>
-	<option value=1>Luminance</option>
-</select>
-<br/>
 <div class="setting">
-	Luma average:<br />
-	<form id="lumaavgform">
-		<input type="radio" name="lumaavg" value="average" checked>Average</input><br />
-		<input type="radio" name="lumaavg" value="square">RMS</input>
-	</form>
+	Compression quality: <select class="textInput" value=2 id="dxtquality">
+		<option value=0>Fast</option>
+		<option value=1>Normal</option>
+		<option value=2 selected>Slow</option>
+		<option value=3>Very slow</option>
+	</select><br/>
 </div>
-<div class="setting">
-	Luma threshold:<br />
-	<form id="lumathrform">
-		<input type="radio" name="lumathr" value="average">Average</input><br />
-		<input type="radio" name="lumathr" value="square" checked>RMS</input>
-	</form>
 </div>
-<div class="setting">
-	Brightness:<br />
-	<form id="brightnessform">
-		<input type="radio" name="brightness" value=0>-1</input>
-		<input type="radio" name="brightness" value=1 checked>0</input>
-		<input type="radio" name="brightness" value=2>+1</input>
-	</form>
-	<br />
-</div>
-
+<p id="progress"></p>
 </div>
 <br /><br />
 <button id="convertButton" type="button" onclick="convert()" disabled>Convert</button> &nbsp; 
@@ -128,6 +109,7 @@ changelog:<br />
 <script src="libgif.js" type="text/javascript"></script>
 <script src="dither.js" type="text/javascript"></script>
 <script src="quantize.js" type="text/javascript"></script>
+<script src="dxt.js" type="text/javascript"></script>
 <script src="vtf.js" type="text/javascript"></script>
 </body>
 </head>

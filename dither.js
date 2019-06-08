@@ -99,8 +99,8 @@ function bestMatchIndex(palette, color) {
     var best = [Infinity, [0, 0, 0]];
     for (var i = 0; i < palette.length; i += 1) {
         if (colorDifference == 1){
-            var luma1 = (0.2126*color[0])+(0.7152*color[1])+(0.0722*color[2]);
-            var luma2 = (0.2126*palette[i][0])+(0.7152*palette[i][1])+(0.0722*palette[i][2]);
+            var luma1 = getLuminance(color[0], color[1], color[2]);
+            var luma2 = getLuminance(palette[i][0], palette[i][1], palette[i][2]);
             var difference = Math.abs(luma1 - luma2);
         }
         else if (!colorSqrt)

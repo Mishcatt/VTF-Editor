@@ -1,5 +1,6 @@
 var colorTable = [];
 var pixelTable = [];
+var valueTable = [];
 var alphaValueTable = [];
 var alphaLookupTable = [];
 var blockCount = 65280;
@@ -20,11 +21,16 @@ var outputImage = [];
 var shortened = false;
 var colorSqrt = false;
 var forceDither = false;
+var lumaPow = false;
 var colorDifference = 0;
+var cresizer = document.createElement('canvas');
+var outdxt;
 setResolution();
 function setResolution() {
+	setOutputType(document.getElementById('format'));
 	colorTable = [];
 	pixelTable = [];
+	valueTable = [];
 	alphaValueTable = [];
 	alphaLookupTable = [];
 	blockCount = 65280;
@@ -122,11 +128,12 @@ function handleFileSelect(evt) {
 	document.getElementById('saveButton').disabled = true;
 	document.getElementById('files0').disabled = true;
 	
-	
+	imagesLoaded = 0;
 	frameCount = files.length;
 	frames = [];
 	frames[0] = [];
-	
+	currFrame = 0;
+	document.body.style.cursor = "url(img/aero_derpy_busy.ani), wait";
 	for (var i = 0; i < files.length; i++ ) {
 		if (files[i] && files[i].type.match('image.*')) {
 			var reader = new FileReader();
@@ -135,7 +142,7 @@ function handleFileSelect(evt) {
 			reader.fileType = files[i].type;
 			
 			reader.onload = (function(e) {
-					console.log(this.fileType);
+					//console.log(this.fileType);
 					var img = new Image();
 					if (this.fileType == "image/gif"){
 						frameCount = 0;
@@ -152,6 +159,7 @@ function handleFileSelect(evt) {
 						if (imagesLoaded == frameCount) {
 							check();
 							createCanvas();
+							document.body.style.cursor = "auto";
 						}
 					}
 					else {
@@ -165,6 +173,7 @@ function handleFileSelect(evt) {
 							if (imagesLoaded == frameCount) {
 								check();
 								createCanvas();
+								document.body.style.cursor = "auto";
 							}
 						}
 					}
@@ -219,11 +228,19 @@ function setSingleFrame() {
 	}
 }
 
+function getFrameRows() {
+	return Math.min(frameCount,Math.floor(32767/height));
+}
+
+function getFrameColumns() {
+	return Math.ceil(frameCount * height / 32767);
+}
+
 function generateCanvas(ccanvas, cwidth, cheight) {
 
 	var canvas = mipmaps[ccanvas];
-	canvas.width = cwidth;
-	canvas.height = cheight * frameCount;
+	canvas.width = cwidth * getFrameColumns();
+	canvas.height = cheight * getFrameRows();
 
 	if (singleImageAnim) {
 		var fimg = frames[ccanvas][0];
@@ -237,7 +254,7 @@ function generateCanvas(ccanvas, cwidth, cheight) {
 			var scale = 1;
 			if (document.getElementById("rescaleCheck").checked)
 				scale = Math.min(cheight/fimg.height,cwidth/fimg.width);
-			canvas.getContext('2d').drawImage(fimg, cwidth/2-fimg.width * scale /2, cheight/2-fimg.height * scale/2 + cheight * frame, fimg.width * scale, fimg.height * scale);
+			canvas.getContext('2d').drawImage(fimg, cwidth/2-fimg.width * scale /2+ Math.floor(frame * height / 32767)*cwidth, cheight/2-fimg.height * scale/2 + cheight * (frame % getFrameRows()), fimg.width * scale, fimg.height * scale);
 		}
 	}
 	document.getElementById('filesizee').innerHTML = "Estimated file size: "+(getEstFileSize()/1024);
@@ -277,6 +294,7 @@ function createCanvas() { // put centered image on canvas
 function convert() {
 	blockPosition = 0;
 	document.body.style.cursor = "url(img/aero_derpy_busy.ani), wait";
+	
 	createCanvas();
 	blockCount = 0;
 	if (hasMipmaps)
@@ -378,7 +396,7 @@ function getReducedMipmapCount() {
 }
 function setOutputType(el){
 	outputType = el.value;
-	if (el.value != 0 && el.value != 2)
+	if (el.value != 0 && el.value != 2 && el.value != 13 && el.value != 15)
 		document.getElementById('ditherBlock').style.display = "block";
 	else
 		document.getElementById('ditherBlock').style.display = "none";
@@ -397,295 +415,99 @@ function setOutputType(el){
 function convertPixels(canvas, fwidth, fheight) {
 	if (shortened)
 		fwidth = fwidth - 4;
-	var pix = mipmaps[canvas].getContext("2d").getImageData(mipmaps[canvas].width/2 - fwidth/2, 0, fwidth, fheight);
+	var outimg = new Int32Array(fwidth*fheight/ (outputType == 13 ? 8 : 4));
+	blockPosition = 0;
+	for (var d = 0; d< getFrameColumns(); d++){
+		if (getFrameColumns() > 1)
+			var pix = mipmaps[canvas].getContext("2d").getImageData(mipmaps[canvas].width/2/getFrameColumns() - fwidth/2+d*fwidth, 0, fwidth, d == getFrameColumns() -1 ? (frameCount%getFrameRows())*height : getFrameRows()*height);
+		else
+			var pix = mipmaps[canvas].getContext("2d").getImageData(mipmaps[canvas].width/2 - fwidth/2+d*fwidth, 0, fwidth, fheight);
+		if (outputType == 13 || outputType == 15) {
 
-	if (outputType == 13 || outputType == 15) {
-		for (var b=0; b<=2; b++) {
-			if (document.getElementById("brightnessform")[b].checked) var brightness = b;
-		}
-		var dith = false;
-		if (document.getElementById('ditherCheck').checked) {
-			dith = true;
-			var dpix = mipmaps[canvas].getContext("2d").getImageData(mipmaps[canvas].width/2 - fwidth/2, 0, fwidth, fheight);
-			reduceColors(dpix,5,6,5,8,true);
-		}
-		var position = 0;
-		for (var j=0; j<fheight/4; j++) { // rows of blocks
-			for (var i=0; i<fwidth/4; i++) { // columns of blocks
-				var lumaMax = 0;
-				var lumaMin = 255;
-				//var hue1 = -1;
-				//var hue2 = -1;
-				var pikselMax = [0,0,0];
-				var pikselMin = [255,255,255];
-				var isAlpha = false;
-				var pixelOrder = [0,2,3,1]; // kolejność kolorów dla nieodwróconych kolorów bez przezroczystości
-				var alphaOrder = [1,7,6,5,4,3,2,0];
-				var alphaMax = 0;
-				var alphaMin = 255;
-				blockCount++;
-				// 0 - color1, 1 - color2, 2 - color1.33(or 1.5), 3 - color1.66(or alpha)
-				for (var y=0; y<4; y++) { // pixel rows in block
-					for (var x=0; x<16; x+=4) { // pixel columns in block
-						position = x+(fwidth*4*y)+(16*i)+(fwidth*16*j); // position of a pixel in canvas
-						var luma = (0.2126*pix.data[position])+(0.7152*pix.data[position+1])+(0.0722*pix.data[position+2]); // ITU-R BT.709
-						if (pix.data[position+3] > 127 || outputType == 15) { // find most different colors, unless transparent
-							if (luma > lumaMax) {
-								lumaMax = luma;
-								pikselMax[0] = pix.data[position];
-								pikselMax[1] = pix.data[position+1];
-								pikselMax[2] = pix.data[position+2];
-							}
-							if (luma < lumaMin) {
-								lumaMin = luma;
-								pikselMin[0] = pix.data[position];
-								pikselMin[1] = pix.data[position+1];
-								pikselMin[2] = pix.data[position+2];
-							}
-							if (pix.data[position+3] > alphaMax) {
-								alphaMax = pix.data[position+3];
-							}
-							if (pix.data[position+3] < alphaMin) {
-								alphaMin = pix.data[position+3];
-							}
-						}
-						else isAlpha = true;
-					}
-				}
-				var alphaInter = (alphaMax-alphaMin) / 7;
-				alphaValueTable[blockPosition] = alphaMax;
-				alphaValueTable[blockPosition+1] = alphaMin;
-				colorTable[blockPosition] = (Math.round((pikselMin[0]+(2*brightness))*31/255)<<11)+(Math.round((pikselMin[1]+brightness)*63/255)<<5)+(Math.round((pikselMin[2]+(2*brightness))*31/255)); // RGB888 to RGB565 color1
-				colorTable[blockPosition+1] = (Math.round((pikselMax[0]+(2*brightness))*31/255)<<11)+(Math.round((pikselMax[1]+brightness)*63/255)<<5)+(Math.round((pikselMax[2]+(2*brightness))*31/255)); // RGB888 to RGB565 color2
-				/*if(colorTable[blockPosition] == colorTable[blockPosition+1]){
-					colorTable[blockPosition] = (Math.floor((pikselMin[0]+(2*brightness))*31/255)<<11)+(Math.floor((pikselMin[1]+brightness)*63/255)<<5)+(Math.floor((pikselMin[2]+(2*brightness))*31/255)); // RGB888 to RGB565 color1
-					colorTable[blockPosition+1] = (Math.ceil((pikselMax[0]+(2*brightness))*31/255)<<11)+(Math.ceil((pikselMax[1]+brightness)*63/255)<<5)+(Math.ceil((pikselMax[2]+(2*brightness))*31/255)); // RGB888 to RGB565 color2
-				}*/
-				pikselMin[0] = ((colorTable[blockPosition] >> 11) & 31) * (255/31);
-				pikselMin[1] = ((colorTable[blockPosition] >> 5) & 63) * (255/63);
-				pikselMin[2] = ((colorTable[blockPosition]) & 31) * (255/31);
-				pikselMax[0] = ((colorTable[blockPosition+1] >> 11) & 31) * (255/31);
-				pikselMax[1] = ((colorTable[blockPosition+1] >> 5) & 63) * (255/63);
-				pikselMax[2] = ((colorTable[blockPosition+1]) & 31) * (255/31);
-				if (document.getElementById("lumaavgform")[0].checked) var lumaAvg = (lumaMax+lumaMin)/2;
-				else var lumaAvg = Math.sqrt(((lumaMax*lumaMax)+(lumaMin*lumaMin))/2);
-				if (isAlpha == false) { // bez przezroczystości w bloku
-					if (colorTable[blockPosition] < colorTable[blockPosition+1]) { // upewnijmy się że kolor1 > kolor2
-						var temp = colorTable[blockPosition];
-						colorTable[blockPosition] = colorTable[blockPosition+1];
-						colorTable[blockPosition+1] = temp;
-						pixelOrder = [1,3,2,0];
-					}
-					if (colorTable[blockPosition] == colorTable[blockPosition+1]) { // wyjątek
-						if (colorTable[blockPosition+1] > 0) {
-							colorTable[blockPosition+1]--; // na zapas, żeby silnik gry nie myślał że blok ma przezroczystość
-							pixelOrder = [0,0,0,0];
-						}
-						else {
-							colorTable[blockPosition]++;
-							pixelOrder = [1,1,1,1];
-						}
-					}
-					if (alphaValueTable[blockPosition] == alphaValueTable[blockPosition+1]) {
-						if (alphaValueTable[blockPosition+1] > 0) {
-							alphaValueTable[blockPosition+1]--; // na zapas, żeby silnik gry nie myślał że blok ma przezroczystość
-							alphaOrder = [0,0,0,0,0,0,0,0];
-						}
-						else {
-							alphaValueTable[blockPosition]++;
-							alphaOrder = [1,1,1,1,1,1,1,1];
-						}
-					}
-					if (document.getElementById("lumathrform")[0].checked) {
-						var lumaBelow = (lumaMin+lumaAvg)/2; // poniżej tego progu rysuj pikselMin
-						var lumaAbove = (lumaMax+lumaAvg)/2; // poniżej tego progu rysuj piksel23
-					}
-					else {
-						var lumaBelow = Math.sqrt(((lumaMin*lumaMin)+(lumaAvg*lumaAvg))/2); // poniżej tego progu rysuj pikselMin
-						var lumaAbove = Math.sqrt(((lumaMax*lumaMax)+(lumaAvg*lumaAvg))/2); // poniżej tego progu rysuj piksel23
-					}
-					var piksel13 = [(pikselMin[0]+pikselMin[0]+pikselMax[0])/3,(pikselMin[1]+pikselMin[1]+pikselMax[1])/3,(pikselMin[2]+pikselMin[2]+pikselMax[2])/3]; // 1/3 między kolorami
-					var piksel23 = [(pikselMin[0]+pikselMax[0]+pikselMax[0])/3,(pikselMin[1]+pikselMax[1]+pikselMax[1])/3,(pikselMin[2]+pikselMax[2]+pikselMax[2])/3]; // 2/3 między kolorami
-					pixelTable[blockPosition] = 0;
-					pixelTable[blockPosition+1] = 0;
-					alphaLookupTable[blockPosition] = 0;
-					alphaLookupTable[blockPosition+1] = 0;
-					for (var y=0; y<4; y++) {
-						for (var x=0; x<16; x+=4) {
-							
-							position = x+(fwidth*4*y)+(16*i)+(fwidth*16*j);
-							
+			var progressEl= document.getElementById("progress");
+			var quality = parseInt(document.getElementById("dxtquality").value);
+			m_nRefinementSteps = quality;
+			m_nRefinementStepsAlpha = quality+1;
+			m_b3DRefinement = quality == 3;
+			m_bUseAdaptiveWeighting = quality > 1;
+			m_nCompressionSpeed = quality == 0 ? CMP_Speed_Fast : CMP_Speed_Normal;
+			m_nCompressionSpeedAlpha = quality == 1 ? CMP_Speed_Fast : CMP_Speed_Normal;
+			if (quality == 3)
+				m_nRefinementSteps -=1;
 
-							if (dith || colorDifference == 0) {
-								var palette = [pikselMin, piksel13, piksel23, pikselMax];
-								var color = [pix.data[position], pix.data[position+1], pix.data[position+2]];
-								var closest = bestMatchIndex(palette, color);
-								var closest2 = bestMatchExIndex(palette, color, closest);
-								var closest3;
-								if (closest[0] == closest2[0])
-									closest3 = 0;
-								else
-									closest3 = Math.round(closest[0]/(closest[0]+closest2[0]) * 16);
-								// Use the dithering matrix that is based on the closest shade and pick the color
-								
-								if (dith)
-									var trans = [closest[1], closest2[1]][getDither(dither[closest3], x/4, y)];
-								else
-									var trans = closest[1];
-								if (y<2) pixelTable[blockPosition] += pixelOrder[trans] << 2*((x/4)+(4*y)); // first two rows
-								else pixelTable[blockPosition+1] += pixelOrder[trans] << 2*((x/4)+(4*(y-2))); // last two rows
-								pix.data[position] = palette[trans][0];
-								pix.data[position+1] = palette[trans][1];
-								pix.data[position+2] = palette[trans][2];
-							}
-							else{
-								var luma = (0.2126*pix.data[position])+(0.7152*pix.data[position+1])+(0.0722*pix.data[position+2]); // ITU-R BT.709
-								if (luma < lumaBelow) { 
-									pix.data[position] = pikselMin[0];
-									pix.data[position+1] = pikselMin[1];
-									pix.data[position+2] = pikselMin[2];
-									if (y<2) pixelTable[blockPosition] += pixelOrder[0] << 2*((x/4)+(4*y)); // first two rows
-									else pixelTable[blockPosition+1] += pixelOrder[0] << 2*((x/4)+(4*(y-2))); // last two rows
-								}
-								else if (luma < lumaAvg) { 
-									pix.data[position] = piksel13[0];
-									pix.data[position+1] = piksel13[1];
-									pix.data[position+2] = piksel13[2];
-									if (y<2) pixelTable[blockPosition] += pixelOrder[1] << 2*((x/4)+(4*y));
-									else pixelTable[blockPosition+1] += pixelOrder[1] << 2*((x/4)+(4*(y-2)));
-								}
-								else if (luma < lumaAbove) {
-									pix.data[position] = piksel23[0];
-									pix.data[position+1] = piksel23[1];
-									pix.data[position+2] = piksel23[2];
-									if (y<2) pixelTable[blockPosition] += pixelOrder[2] << 2*((x/4)+(4*y));
-									else pixelTable[blockPosition+1] += pixelOrder[2] << 2*((x/4)+(4*(y-2)));
-								}
-								else {
-									pix.data[position] = pikselMax[0];
-									pix.data[position+1] = pikselMax[1];
-									pix.data[position+2] = pikselMax[2];
-									if (y<2) pixelTable[blockPosition] += pixelOrder[3] << 2*((x/4)+(4*y));
-									else pixelTable[blockPosition+1] += pixelOrder[3] << 2*((x/4)+(4*(y-2)));
-								}
-							}
-							if (outputType == 13)
-								pix.data[position+3] = 255;
-							else {
-								var alphanum = 0;
-								if (alphaInter != 0)
-									var alphanum = Math.round((pix.data[position+3]-alphaMin) / alphaInter);
-								if (y<2) alphaLookupTable[blockPosition] += alphaOrder[alphanum] << 3*((x/4)+(4*y));
-								else alphaLookupTable[blockPosition+1] += alphaOrder[alphanum] << 3*((x/4)+(4*(y-2)));
-								pix.data[position+3] = restoreAlpha (alphaValueTable[blockPosition], alphaValueTable[blockPosition+1], alphaOrder[alphanum]);
-							}
-						}
+			var bufsrc = new Int32Array(16);
+			var bufprv = new Uint8Array(64);
+			var bufsrcalpha = new Uint8Array(16);
+			var bufout = new Int32Array(2);
+			
+			/*var dith = false;
+			if (document.getElementById('ditherCheck').checked) {
+				dith = true;
+				var dpix = mipmaps[canvas].getContext("2d").getImageData(mipmaps[canvas].width/2 - fwidth/2, 0, fwidth, fheight);
+				reduceColors(dpix,5,6,5,8,true);
+			}*/
+			
+			valueTable[canvas] = outimg;
+			var position = 0;
+			for (var j=0; j<pix.height/4; j++) { // rows of blocks
+				for (var i=0; i<fwidth/4; i++) { // columns of blocks
+				blockCount+=1;
+				for (var y = 0; y < 4; y++){
+					for (var x = 0; x < 4; x++){
+						position = x*4+(16*i)+(fwidth*16*j)+(fwidth*4*y);
+						bufsrc[x+y*4]=(pix.data[position+3]<<24)+(pix.data[position]<<16)+(pix.data[position+1]<<8)+pix.data[position+2];
 					}
 				}
-				else {
-					pixelOrder = [0,2,1,3];
-					if (colorTable[blockPosition] > colorTable[blockPosition+1]) { // upewnijmy się że kolor1 <= kolor2
-						var temp = colorTable[blockPosition];
-						colorTable[blockPosition] = colorTable[blockPosition+1];
-						colorTable[blockPosition+1] = temp;
-						pixelOrder = [1,2,0,3];
-					}
-					var pikselAvg = [(pikselMin[0]+pikselMax[0])/2,(pikselMin[1]+pikselMax[1])/2,(pikselMin[2]+pikselMax[2])/2];
-					if (document.getElementById("lumathrform")[0].checked) {
-						var lumaMinimum = (lumaMin+lumaMin+lumaAvg)/3; // poniżej tego progu rysuj pikselMin
-						var lumaMaximum = (lumaMax+lumaMax+lumaAvg)/3; // poniżej tego progu rysuj pikselAvg
-					}
-					else {
-						var lumaMinimum = Math.sqrt(((lumaMin*lumaMin)+(lumaMin*lumaMin)+(lumaAvg*lumaAvg))/3); // poniżej tego progu rysuj pikselMin
-						var lumaMaximum = Math.sqrt(((lumaMax*lumaMax)+(lumaMax*lumaMax)+(lumaAvg*lumaAvg))/3); // poniżej tego progu rysuj pikselAvg
-					}
-					pixelTable[blockPosition] = 0;
-					pixelTable[blockPosition+1] = 0;
-					for (var y=0; y<4; y++) {
-						for (var x=0; x<16; x+=4) {
-							position = x+(fwidth*4*y)+(16*i)+(fwidth*16*j);
-							var luma = (0.2126*pix.data[position])+(0.7152*pix.data[position+1])+(0.0722*pix.data[position+2]); // ITU-R BT.709
-							if (pix.data[position+3] < 128) {
-								pix.data[position+3] = 0;
-								if (y<2) pixelTable[blockPosition] += pixelOrder[3] << 2*((x/4)+(4*y));
-								else pixelTable[blockPosition+1] += pixelOrder[3] << 2*((x/4)+(4*(y-2)));
-							}
-							else if (dith || colorDifference == 0) {
-								var palette = [pikselMin, pikselAvg, pikselMax];
-								var color = [pix.data[position], pix.data[position+1], pix.data[position+2]];
-								var closest = bestMatchIndex(palette, color);
-								var closest2 = bestMatchExIndex(palette, color, closest);
-								var closest3;
-								if (closest[0] == closest2[0])
-									closest3 = 0;
-								else
-									closest3 = Math.round(closest[0]/(closest[0]+closest2[0]) * 16);
-								// Use the dithering matrix that is based on the closest shade and pick the color
-								
-								if (dith)
-									var trans = [closest[1], closest2[1]][getDither(dither[closest3], x/4, y)];
-								else
-									var trans = closest[1];
-								if (y<2) pixelTable[blockPosition] += pixelOrder[trans] << 2*((x/4)+(4*y)); // first two rows
-								else pixelTable[blockPosition+1] += pixelOrder[trans] << 2*((x/4)+(4*(y-2))); // last two rows
-								pix.data[position] = palette[trans][0];
-								pix.data[position+1] = palette[trans][1];
-								pix.data[position+2] = palette[trans][2];
-							}
-							else {
-								pix.data[position+3] = 255;
-								if (luma < lumaMinimum) { 
-									pix.data[position] = pikselMin[0];
-									pix.data[position+1] = pikselMin[1];
-									pix.data[position+2] = pikselMin[2];
-									if (y<2) pixelTable[blockPosition] += pixelOrder[0] << 2*((x/4)+(4*y));
-									else pixelTable[blockPosition+1] += pixelOrder[0] << 2*((x/4)+(4*(y-2)));
-								}
-								else if (luma < lumaMaximum) { 
-									pix.data[position] = pikselAvg[0];
-									pix.data[position+1] = pikselAvg[1];
-									pix.data[position+2] = pikselAvg[2];
-									if (y<2) pixelTable[blockPosition] += pixelOrder[1] << 2*((x/4)+(4*y));
-									else pixelTable[blockPosition+1] += pixelOrder[1] << 2*((x/4)+(4*(y-2)));
-								}
-								else {
-									pix.data[position] = pikselMax[0];
-									pix.data[position+1] = pikselMax[1];
-									pix.data[position+2] = pikselMax[2];
-									if (y<2) pixelTable[blockPosition] += pixelOrder[2] << 2*((x/4)+(4*y));
-									else pixelTable[blockPosition+1] += pixelOrder[2] << 2*((x/4)+(4*(y-2)));
-								}
-							}
+				if (outputType == 15) {
+					for (var y = 0; y < 4; y++){
+						for (var x = 0; x < 4; x++){
+							position = x*4+(16*i)+(fwidth*16*j)+(fwidth*4*y);
+							bufsrcalpha[x+y*4]=pix.data[position+3];
 						}
 					}
+					CompressAlphaBlock(bufsrcalpha,bufout,bufprv);
+					outimg.set(bufout,blockPosition);
+					blockPosition+=2;
 				}
-				blockPosition += 2; // block number*2 (for double arrays)
+				CompressRGBBlock(bufsrc,bufout,CalculateColourWeightings(bufsrc), outputType==13, outputType==13, 127,bufprv)
+					for (var y = 0; y < 4; y++){
+						for (var x = 0; x < 4; x+=1){
+							position = x*4+(16*i)+(fwidth*16*j)+(fwidth*4*y);
+							pix.data[position]=bufprv[(x+y*4)*4+2];
+							pix.data[position+1]=bufprv[(x+y*4)*4+1];
+							pix.data[position+2]=bufprv[(x+y*4)*4];
+							pix.data[position+3]=bufprv[(x+y*4)*4+3];
+						}
+					}
+				outimg.set(bufout,blockPosition);
+				blockPosition+=2;
+				}
 			}
 		}
-	}
-	else if(outputType == 0) {
-		outputImage[canvas] = pix.data;
-	}
-	else if (outputType == 2) {
-		for (var i = 0; i < pix.data.length; i += 4){
-			pix.data[i+3] = 255;
+		else if(outputType == 0) {
+			outputImage[canvas] = pix.data;
 		}
-		outputImage[canvas] = pix.data;
-	}
-	else if(outputType == 4) {
-		for (var i = 0; i < pix.data.length; i += 4){
-			pix.data[i+3] = 255;
+		else if (outputType == 2) {
+			for (var i = 0; i < pix.data.length; i += 4){
+				pix.data[i+3] = 255;
+			}
+			outputImage[canvas] = pix.data;
 		}
-		reduceColors(pix, 5, 6, 5, 8, document.getElementById('ditherCheck').checked);
-		outputImage[canvas] = pix.data;
-	}
-	else if(outputType == 21) {
-		reduceColors(pix, 5, 5, 5, 1, document.getElementById('ditherCheck').checked);
-		outputImage[canvas] = pix.data;
-	}
-	else if(outputType == 19) {
-		reduceColors(pix, 4, 4, 4, 4, document.getElementById('ditherCheck').checked);
-		outputImage[canvas] = pix.data;
+		else if(outputType == 4) {
+			for (var i = 0; i < pix.data.length; i += 4){
+				pix.data[i+3] = 255;
+			}
+			reduceColors(pix, 5, 6, 5, 8, document.getElementById('ditherCheck').checked);
+			outputImage[canvas] = pix.data;
+		}
+		else if(outputType == 21) {
+			reduceColors(pix, 5, 5, 5, 1, document.getElementById('ditherCheck').checked);
+			outputImage[canvas] = pix.data;
+		}
+		else if(outputType == 19) {
+			reduceColors(pix, 4, 4, 4, 4, document.getElementById('ditherCheck').checked);
+			outputImage[canvas] = pix.data;
+		}
 	}
 	mipmaps[canvas].getContext("2d").putImageData(pix,mipmaps[canvas].width/2 - fwidth/2,0);
 }
@@ -706,33 +528,18 @@ function createVTF() {
 	var header = [86,84,70,0,7,0,0,0,1,0,0,0,64,0,0,0,0,0,0,0,12 + document.getElementById("sampling").value,35-hasMipmaps,0,0,frameCount,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,outputType,0,0,0,hasMipmaps ? getReducedMipmapCount()+1 : 1,13,0,0,0,0,0,1]; // 64B (bare minimum)
 	writeShort(header,16, shortened ? width - 4 : width);
 	writeShort(header,18, height);
+	writeShort(header,24, frameCount);
 	for (var i=0; i<header.length; i++) {
 		file[i] = header[i];
 	}
-	if (outputType == 13) {
-		for (var i=64; i<file.length; i+=8) {
-			var blockNum = (i-64)/4;
-			writeShort(file, i, colorTable[blockNum]);
-			writeShort(file, i+2, colorTable[blockNum+1]);
-			writeShort(file, i+4, pixelTable[blockNum]);
-			writeShort(file, i+6, pixelTable[blockNum+1]);
-			
-		}
-	}
-	else if (outputType == 15) {
-		for (var i=64; i<file.length; i+=16) {
-			var blockNum = (i-64)/8;
-
-			file[i] = alphaValueTable[blockNum];
-			file[i+1] = alphaValueTable[blockNum+1];
-			writeInt(file, i+2, alphaLookupTable[blockNum],3);
-			writeInt(file, i+5, alphaLookupTable[blockNum+1],3);
-
-			writeShort(file, i+8, colorTable[blockNum]);
-			writeShort(file, i+10, colorTable[blockNum+1]);
-
-			writeShort(file, i+12, pixelTable[blockNum]);
-			writeShort(file, i+14, pixelTable[blockNum+1]);
+	if (outputType == 13 || outputType == 15) {
+		var pos = 64;
+		for (var i = valueTable.length-1; i >= 0; i--){
+			var table = valueTable[i];
+			for (var j = 0; j < table.length; j++) {
+				writeInt(file,pos, table[j],4);
+				pos+=4;
+			}
 		}
 	}
 	else if (outputType == 0){
@@ -997,4 +804,11 @@ function download(data, filename) {
 
 function getColorDiff(color1, color2){
 	return Math.abs(color1[0] - color2[0]) + Math.abs(color1[1] - color2[1]) + Math.abs(color1[2] - color2[2]);
+}
+
+function getLuminance(red, green, blue){
+	if (lumaPow)
+		return (0.2126*red*red/255) + (0.7152*green*green/255)+ (0.0722*blue*blue/255);
+	else 
+		return (0.2126*red) + (0.7152*green)+ (0.0722*blue);
 }
