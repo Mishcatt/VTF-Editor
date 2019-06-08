@@ -133,6 +133,7 @@ function handleFileSelect(evt) {
 	frames = [];
 	frames[0] = [];
 	currFrame = 0;
+	document.body.style.cursor = "url(img/aero_derpy_busy.ani), wait";
 	for (var i = 0; i < files.length; i++ ) {
 		if (files[i] && files[i].type.match('image.*')) {
 			var reader = new FileReader();
@@ -141,7 +142,7 @@ function handleFileSelect(evt) {
 			reader.fileType = files[i].type;
 			
 			reader.onload = (function(e) {
-					console.log(this.fileType);
+					//console.log(this.fileType);
 					var img = new Image();
 					if (this.fileType == "image/gif"){
 						frameCount = 0;
@@ -158,6 +159,7 @@ function handleFileSelect(evt) {
 						if (imagesLoaded == frameCount) {
 							check();
 							createCanvas();
+							document.body.style.cursor = "auto";
 						}
 					}
 					else {
@@ -171,6 +173,7 @@ function handleFileSelect(evt) {
 							if (imagesLoaded == frameCount) {
 								check();
 								createCanvas();
+								document.body.style.cursor = "auto";
 							}
 						}
 					}
@@ -225,11 +228,19 @@ function setSingleFrame() {
 	}
 }
 
+function getFrameRows() {
+	return Math.min(frameCount,Math.floor(32767/height));
+}
+
+function getFrameColumns() {
+	return Math.ceil(frameCount * height / 32767);
+}
+
 function generateCanvas(ccanvas, cwidth, cheight) {
 
 	var canvas = mipmaps[ccanvas];
-	canvas.width = cwidth;
-	canvas.height = cheight * frameCount;
+	canvas.width = cwidth * getFrameColumns();
+	canvas.height = cheight * getFrameRows();
 
 	if (singleImageAnim) {
 		var fimg = frames[ccanvas][0];
@@ -243,7 +254,7 @@ function generateCanvas(ccanvas, cwidth, cheight) {
 			var scale = 1;
 			if (document.getElementById("rescaleCheck").checked)
 				scale = Math.min(cheight/fimg.height,cwidth/fimg.width);
-			canvas.getContext('2d').drawImage(fimg, cwidth/2-fimg.width * scale /2, cheight/2-fimg.height * scale/2 + cheight * frame, fimg.width * scale, fimg.height * scale);
+			canvas.getContext('2d').drawImage(fimg, cwidth/2-fimg.width * scale /2+ Math.floor(frame * height / 32767)*cwidth, cheight/2-fimg.height * scale/2 + cheight * (frame % getFrameRows()), fimg.width * scale, fimg.height * scale);
 		}
 	}
 	document.getElementById('filesizee').innerHTML = "Estimated file size: "+(getEstFileSize()/1024);
@@ -404,94 +415,99 @@ function setOutputType(el){
 function convertPixels(canvas, fwidth, fheight) {
 	if (shortened)
 		fwidth = fwidth - 4;
-	var pix = mipmaps[canvas].getContext("2d").getImageData(mipmaps[canvas].width/2 - fwidth/2, 0, fwidth, fheight);
+	var outimg = new Int32Array(fwidth*fheight/ (outputType == 13 ? 8 : 4));
+	blockPosition = 0;
+	for (var d = 0; d< getFrameColumns(); d++){
+		if (getFrameColumns() > 1)
+			var pix = mipmaps[canvas].getContext("2d").getImageData(mipmaps[canvas].width/2/getFrameColumns() - fwidth/2+d*fwidth, 0, fwidth, d == getFrameColumns() -1 ? (frameCount%getFrameRows())*height : getFrameRows()*height);
+		else
+			var pix = mipmaps[canvas].getContext("2d").getImageData(mipmaps[canvas].width/2 - fwidth/2+d*fwidth, 0, fwidth, fheight);
+		if (outputType == 13 || outputType == 15) {
 
-	if (outputType == 13 || outputType == 15) {
+			var progressEl= document.getElementById("progress");
+			var quality = parseInt(document.getElementById("dxtquality").value);
+			m_nRefinementSteps = quality;
+			m_nRefinementStepsAlpha = quality+1;
+			m_b3DRefinement = quality == 3;
+			m_bUseAdaptiveWeighting = quality > 1;
+			m_nCompressionSpeed = quality == 0 ? CMP_Speed_Fast : CMP_Speed_Normal;
+			m_nCompressionSpeedAlpha = quality == 1 ? CMP_Speed_Fast : CMP_Speed_Normal;
+			if (quality == 3)
+				m_nRefinementSteps -=1;
 
-		var progressEl= document.getElementById("progress");
-		var quality = parseInt(document.getElementById("dxtquality").value);
-		m_nRefinementSteps = quality;
-		m_nRefinementStepsAlpha = quality+1;
-		m_b3DRefinement = quality == 3;
-		m_bUseAdaptiveWeighting = quality > 1;
-		m_nCompressionSpeed = quality == 0 ? CMP_Speed_Fast : CMP_Speed_Normal;
-		m_nCompressionSpeedAlpha = quality == 1 ? CMP_Speed_Fast : CMP_Speed_Normal;
-		if (quality == 3)
-			m_nRefinementSteps -=1;
-
-		var bufsrc = new Int32Array(16);
-		var bufprv = new Uint8Array(64);
-		var bufsrcalpha = new Uint8Array(16);
-		var bufout = new Int32Array(2);
-		var outimg = new Int32Array(fwidth*fheight/ (outputType == 13 ? 8 : 4));
-		blockPosition = 0;
-		/*var dith = false;
-		if (document.getElementById('ditherCheck').checked) {
-			dith = true;
-			var dpix = mipmaps[canvas].getContext("2d").getImageData(mipmaps[canvas].width/2 - fwidth/2, 0, fwidth, fheight);
-			reduceColors(dpix,5,6,5,8,true);
-		}*/
-		
-		valueTable[canvas] = outimg;
-		var position = 0;
-		for (var j=0; j<fheight/4; j++) { // rows of blocks
-			for (var i=0; i<fwidth/4; i++) { // columns of blocks
-			blockCount+=1;
-			for (var y = 0; y < 4; y++){
-				for (var x = 0; x < 4; x++){
-					position = x*4+(16*i)+(fwidth*16*j)+(fwidth*4*y);
-					bufsrc[x+y*4]=(pix.data[position+3]<<24)+(pix.data[position]<<16)+(pix.data[position+1]<<8)+pix.data[position+2];
-				}
-			}
-			if (outputType == 15) {
+			var bufsrc = new Int32Array(16);
+			var bufprv = new Uint8Array(64);
+			var bufsrcalpha = new Uint8Array(16);
+			var bufout = new Int32Array(2);
+			
+			/*var dith = false;
+			if (document.getElementById('ditherCheck').checked) {
+				dith = true;
+				var dpix = mipmaps[canvas].getContext("2d").getImageData(mipmaps[canvas].width/2 - fwidth/2, 0, fwidth, fheight);
+				reduceColors(dpix,5,6,5,8,true);
+			}*/
+			
+			valueTable[canvas] = outimg;
+			var position = 0;
+			for (var j=0; j<pix.height/4; j++) { // rows of blocks
+				for (var i=0; i<fwidth/4; i++) { // columns of blocks
+				blockCount+=1;
 				for (var y = 0; y < 4; y++){
 					for (var x = 0; x < 4; x++){
 						position = x*4+(16*i)+(fwidth*16*j)+(fwidth*4*y);
-						bufsrcalpha[x+y*4]=pix.data[position+3];
+						bufsrc[x+y*4]=(pix.data[position+3]<<24)+(pix.data[position]<<16)+(pix.data[position+1]<<8)+pix.data[position+2];
 					}
 				}
-				CompressAlphaBlock(bufsrcalpha,bufout,bufprv);
+				if (outputType == 15) {
+					for (var y = 0; y < 4; y++){
+						for (var x = 0; x < 4; x++){
+							position = x*4+(16*i)+(fwidth*16*j)+(fwidth*4*y);
+							bufsrcalpha[x+y*4]=pix.data[position+3];
+						}
+					}
+					CompressAlphaBlock(bufsrcalpha,bufout,bufprv);
+					outimg.set(bufout,blockPosition);
+					blockPosition+=2;
+				}
+				CompressRGBBlock(bufsrc,bufout,CalculateColourWeightings(bufsrc), outputType==13, outputType==13, 127,bufprv)
+					for (var y = 0; y < 4; y++){
+						for (var x = 0; x < 4; x+=1){
+							position = x*4+(16*i)+(fwidth*16*j)+(fwidth*4*y);
+							pix.data[position]=bufprv[(x+y*4)*4+2];
+							pix.data[position+1]=bufprv[(x+y*4)*4+1];
+							pix.data[position+2]=bufprv[(x+y*4)*4];
+							pix.data[position+3]=bufprv[(x+y*4)*4+3];
+						}
+					}
 				outimg.set(bufout,blockPosition);
 				blockPosition+=2;
-			}
-			CompressRGBBlock(bufsrc,bufout,CalculateColourWeightings(bufsrc), outputType==13, outputType==13, 127,bufprv)
-				for (var y = 0; y < 4; y++){
-					for (var x = 0; x < 4; x+=1){
-						position = x*4+(16*i)+(fwidth*16*j)+(fwidth*4*y);
-						pix.data[position]=bufprv[(x+y*4)*4+2];
-						pix.data[position+1]=bufprv[(x+y*4)*4+1];
-						pix.data[position+2]=bufprv[(x+y*4)*4];
-						pix.data[position+3]=bufprv[(x+y*4)*4+3];
-					}
 				}
-			outimg.set(bufout,blockPosition);
-			blockPosition+=2;
 			}
 		}
-	}
-	else if(outputType == 0) {
-		outputImage[canvas] = pix.data;
-	}
-	else if (outputType == 2) {
-		for (var i = 0; i < pix.data.length; i += 4){
-			pix.data[i+3] = 255;
+		else if(outputType == 0) {
+			outputImage[canvas] = pix.data;
 		}
-		outputImage[canvas] = pix.data;
-	}
-	else if(outputType == 4) {
-		for (var i = 0; i < pix.data.length; i += 4){
-			pix.data[i+3] = 255;
+		else if (outputType == 2) {
+			for (var i = 0; i < pix.data.length; i += 4){
+				pix.data[i+3] = 255;
+			}
+			outputImage[canvas] = pix.data;
 		}
-		reduceColors(pix, 5, 6, 5, 8, document.getElementById('ditherCheck').checked);
-		outputImage[canvas] = pix.data;
-	}
-	else if(outputType == 21) {
-		reduceColors(pix, 5, 5, 5, 1, document.getElementById('ditherCheck').checked);
-		outputImage[canvas] = pix.data;
-	}
-	else if(outputType == 19) {
-		reduceColors(pix, 4, 4, 4, 4, document.getElementById('ditherCheck').checked);
-		outputImage[canvas] = pix.data;
+		else if(outputType == 4) {
+			for (var i = 0; i < pix.data.length; i += 4){
+				pix.data[i+3] = 255;
+			}
+			reduceColors(pix, 5, 6, 5, 8, document.getElementById('ditherCheck').checked);
+			outputImage[canvas] = pix.data;
+		}
+		else if(outputType == 21) {
+			reduceColors(pix, 5, 5, 5, 1, document.getElementById('ditherCheck').checked);
+			outputImage[canvas] = pix.data;
+		}
+		else if(outputType == 19) {
+			reduceColors(pix, 4, 4, 4, 4, document.getElementById('ditherCheck').checked);
+			outputImage[canvas] = pix.data;
+		}
 	}
 	mipmaps[canvas].getContext("2d").putImageData(pix,mipmaps[canvas].width/2 - fwidth/2,0);
 }
@@ -512,6 +528,7 @@ function createVTF() {
 	var header = [86,84,70,0,7,0,0,0,1,0,0,0,64,0,0,0,0,0,0,0,12 + document.getElementById("sampling").value,35-hasMipmaps,0,0,frameCount,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,outputType,0,0,0,hasMipmaps ? getReducedMipmapCount()+1 : 1,13,0,0,0,0,0,1]; // 64B (bare minimum)
 	writeShort(header,16, shortened ? width - 4 : width);
 	writeShort(header,18, height);
+	writeShort(header,24, frameCount);
 	for (var i=0; i<header.length; i++) {
 		file[i] = header[i];
 	}
