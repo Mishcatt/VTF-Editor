@@ -333,7 +333,7 @@ function createCanvas() { // put centered image on canvas
 	for (var i=2; (width/i>16) && (height/i>16) /*&& (width/i) % 4 == 0 && (height/i) % 4 == 0*/; i*=2) {
 		mipmapCount++;
 		mipmaps.push(document.createElement('canvas'));
-		mipmapsHTML += "<div id=\"inputWrapper"+mipmapCount+"\"></div>\n<canvas class=\"mipmapElement\" id=\"canvasMipmap"+mipmapCount+"\"></canvas><br /><input type=\"file\" id=\"files"+mipmapCount+"\" name=\"files[]\" accept=\"image/*\" onchange=\"changeMipmap(event,"+mipmapCount+")\" multiple/>\n";
+		mipmapsHTML += "<div id=\"inputWrapper"+mipmapCount+"\"></div>\n<canvas class=\"mipmapElement\" id=\"canvasMipmap"+mipmapCount+"\"></canvas><br /><input type=\"file\" id=\"files"+mipmapCount+"\" name=\"files[]\" accept=\"image/*,.tga,video/*\" onchange=\"changeMipmap(event,"+mipmapCount+")\" multiple/>\n";
 	}
 	document.getElementById("mipmaps").innerHTML = mipmapsHTML;
 	for (var i=1; i<=mipmapCount; i++) {
@@ -1066,4 +1066,10 @@ function updateHighestResolution(width,height, framesc){
 	}
 	if (autores)
 		setResolution();
+}
+
+function downloadVMT(){
+	var vmtName = prompt("Enter name of the spray");
+	var vmtFileText = document.getElementById('vmtData').innerHTML.replace('"vgui/logos/spray"','"vgui/logos/'+vmtName+'"');
+	download(vmtFileText, vmtName+".vmt");
 }

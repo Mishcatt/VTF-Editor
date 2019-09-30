@@ -116,7 +116,7 @@ Sampling Method: <select class="textInput" value="0" id="sampling">
 <br /><br />
 <button id="convertButton" type="button" onclick="convert()" disabled>Convert</button> &nbsp; 
 <button id="saveButton" type="button" onclick="createVTF()" disabled>Save as VTF</button> &nbsp;
-<button id="saveButtonVMT" type="button" onclick="window.location = 'spray.vmt'" disabled>Save VMT</button><br />
+<button id="saveButtonVMT" type="button" onclick="downloadVMT()" disabled>Save VMT</button><br />
 <br />
 Preview:
 <div id="contentWrapper">
@@ -125,7 +125,7 @@ Preview:
 	<canvas id="tempCanvas"></canvas>
 	<div id="frames"></div>
 </div>
-<input type="file" id="files0" name="files[]" accept="image/*" onchange="changeMipmap(event,0)" disabled multiple/>
+<input type="file" id="files0" name="files[]" accept="image/*,.tga,video/*" onchange="changeMipmap(event,0)" disabled multiple/>
 <div id="mipmaps" style="display: none"></div>
 <br /><br />
 changelog:<br />
@@ -153,7 +153,14 @@ changelog:<br />
 </div>
 
 </div>
-
+<pre id="vmtData" style="display: none">"UnlitGeneric"
+{
+	"$basetexture"	"vgui/logos/spray"
+	"$translucent" "1"
+	"$ignorez" "1"
+	"$vertexcolor" "1"
+	"$vertexalpha" "1"
+}</pre>
 <script src="tga.js" type="text/javascript"></script>
 <script src="libgif.js" type="text/javascript"></script>
 <script src="dither.js" type="text/javascript"></script>
