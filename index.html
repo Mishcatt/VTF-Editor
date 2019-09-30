@@ -25,7 +25,7 @@ The frames are displayed in the same order as they appear in the file browser,<b
 and each one lasts for 0.2s. Animated gifs and videos are also supported.
 </p>
 To download final spray click "Save as VTF".<br /><br />
-<span style="color: #cc3333">Transparency is broken in Linux version of TF2!</span><br />
+<span style="color: #cc3333">Transparency is broken in Linux version of TF2 when using DXT1. Use DXT5 instead!</span><br />
 <div id="resolutionNotice" style="visibility: hidden">Using 1024x1020, no mipmaps</div>
 <select class="textInput" value="auto" id="widthSetting" onchange="setResolution()">
 	<option value=auto>Auto</option>
@@ -115,7 +115,8 @@ Sampling Method: <select class="textInput" value="0" id="sampling">
 <p id="progress"></p>
 <br /><br />
 <button id="convertButton" type="button" onclick="convert()" disabled>Convert</button> &nbsp; 
-<button id="saveButton" type="button" onclick="createVTF()" disabled>Save as VTF</button><br />
+<button id="saveButton" type="button" onclick="createVTF()" disabled>Save as VTF</button> &nbsp;
+<button id="saveButtonVMT" type="button" onclick="window.location = 'spray.vmt'" disabled>Save VMT</button><br />
 <br />
 Preview:
 <div id="contentWrapper">

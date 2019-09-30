@@ -363,6 +363,7 @@ function convert() {
 	converted = true;
 	//document.getElementById('inputWrapper').style.display = "none";
 	document.getElementById('saveButton').disabled = false;
+	document.getElementById('saveButtonVMT').disabled = false;
 	document.getElementById('files0').disabled = false;
 	document.body.style.cursor = "auto";
 	generatePreview(0,width, height);
