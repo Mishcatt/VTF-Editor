@@ -24,7 +24,12 @@ var forceDither = false;
 var lumaPow = false;
 var colorDifference = 0;
 var cresizer = document.createElement('canvas');
+var mipmapclick = false;
 var outdxt;
+var onImportClipAccept;
+var largestResolution = 1024;
+var autores = false;
+var fastSeekEnabled = typeof document.createElement('video').fastSeek != "undefined";
 setResolution();
 function setResolution() {
 	setOutputType(document.getElementById('format'));
@@ -42,25 +47,45 @@ function setResolution() {
 	converted = false;
 	outputImage = [];
 	shortened = false;
+	autores = false;
 	//document.getElementById('convertButton').disabled = true;
 	document.getElementById('saveButton').disabled = true;
 	document.getElementById('files0').disabled = true;
 	document.getElementById("mipmaps").innerHTML = "";
 	document.getElementById("resolutionNotice").style.visibility = "hidden";
-	width = parseInt(document.getElementById("widthSetting").value);
-	height = parseInt(document.getElementById("heightSetting").value);
-	
-	/*if (width == 1024 && height == 1024) {
-		height = 1020;
-		document.getElementById("resolutionNotice").style.visibility = "visible";
-		document.getElementById("mipmapsCheck").disabled = true;
-		document.getElementById("mipmapsCheck").checked = false;
+	if (document.getElementById("widthSetting").value == "custom"){
+		width = parseInt(document.getElementById("widthSettingCus").value);
+		document.getElementById("widthSettingCus").style.display = "inline";
+	}
+	else if (document.getElementById("widthSetting").value == "auto") {
+		width = largestResolution;
+		autores = true;
+		document.getElementById("widthSettingCus").style.display = "none";
 	}
 	else {
-		document.getElementById("resolutionNotice").style.visibility = "hidden";
-		document.getElementById("mipmapsCheck").disabled = false;
-	}*/
+		width = parseInt(document.getElementById("widthSetting").value);
+		document.getElementById("widthSettingCus").style.display = "none";
+	}
+	if (document.getElementById("heightSetting").value == "custom"){
+		height = parseInt(document.getElementById("heightSettingCus").value);
+		document.getElementById("heightSettingCus").style.display = "inline";
+	}
+	else if (document.getElementById("heightSetting").value == "auto") {
+		height = largestResolution;
+		autores = true;
+		document.getElementById("heightSettingCus").style.display = "none";
+	}
+	else {
+		height = parseInt(document.getElementById("heightSetting").value);
+		document.getElementById("heightSettingCus").style.display = "none";
+	}
+	while (autores && getEstFileSize(false)/1024 > 513 && width >= 8 && height >= 8){
+		width /=2;
+		height/=2;
+		check();
+	}
 	check();
+	
 	mipmaps[0].width = width;
 	mipmaps[0].height = height;
 	document.getElementById('preview').getContext("2d").clearRect(0,0,width,height);
@@ -88,11 +113,13 @@ function check() {
 		document.getElementById("resolutionNotice").innerHTML = "";
 		document.getElementById("resolutionNotice").style.visibility = "hidden";
 	}
-	if (getEstFileSize(false)/1024 >= 385 || shortened || document.getElementById("sampling").value == 1){
+	if (getEstFileSize(false)/1024 >= 385 || shortened || document.getElementById("sampling").value == 1 || width % 64 != 0 || height % 64 != 0){
 		document.getElementById("mipmapsCheck").disabled = true;
 		document.getElementById("mipmapsCheck").checked = false;
 	}
 	else{
+		if (!mipmapclick)
+			document.getElementById("mipmapsCheck").checked = true;
 		document.getElementById("mipmapsCheck").disabled = false;
 	}
 	reducedMipmaps = getEstFileSize(false)/1024 >= 384;
@@ -101,6 +128,7 @@ function check() {
 setInterval(function(){
 	if (frameCount > 1 && (imagesLoaded == frameCount || singleImageAnim)) {
 		//console.log("ffd")
+		
 		if (++currFrame >= frameCount)
 			currFrame = 0;
 			var mipwidth = width;
@@ -129,10 +157,10 @@ function handleFileSelect(evt) {
 	document.getElementById('files0').disabled = true;
 	
 	imagesLoaded = 0;
-	frameCount = files.length;
 	frames = [];
 	frames[0] = [];
 	currFrame = 0;
+	frameCount = files.length;
 	document.body.style.cursor = "url(img/aero_derpy_busy.ani), wait";
 	for (var i = 0; i < files.length; i++ ) {
 		if (files[i] && files[i].type.match('image.*')) {
@@ -144,19 +172,30 @@ function handleFileSelect(evt) {
 			reader.onload = (function(e) {
 					//console.log(this.fileType);
 					var img = new Image();
-					if (this.fileType == "image/gif"){
+					if (this.fileType == "image/gif" && i == 0){
 						frameCount = 0;
 						var gif = new SuperGif( {gif: img, auto_play: false});
-						gif.load_raw(new Uint8Array(e.target.result), function (el) {handleGifLoad(gif, frames[0]); check(); createCanvas();});
+						gif.load_raw(new Uint8Array(e.target.result), function (el) {
+							document.body.style.cursor = "auto";
+							updateHighestResolution(gif.get_hdr().width, gif.get_hdr().height,gif.get_frames().length); 
+							handleClipImport(gif.get_frames().length, false, function (options){
+								handleGifLoad(gif, frames[0],options); 
+								updateHighestResolution(gif.get_hdr().width, gif.get_hdr().height,frameCount); 
+								check(); 
+								createCanvas(); 
+								closeClipImport();
+							});
+						});
 					}
 					else if (this.fileType == "image/x-tga" || this.fileType == "image/targa"){
 						var tga = new TGA();
 						tga.load(new Uint8Array(e.target.result));
 						if (singleImageAnim)
-							frameCount = img.height / height;
+							frameCount = tga.header.height / height;
 						imagesLoaded += 1;
 						frames[0].push(tga.getCanvas());
 						if (imagesLoaded == frameCount) {
+							updateHighestResolution(tga.header.width, tga.header.height,frameCount);
 							check();
 							createCanvas();
 							document.body.style.cursor = "auto";
@@ -171,6 +210,7 @@ function handleFileSelect(evt) {
 							imagesLoaded += 1;
 							frames[0].push(img);
 							if (imagesLoaded == frameCount) {
+								updateHighestResolution(img.width, img.height,frameCount);
 								check();
 								createCanvas();
 								document.body.style.cursor = "auto";
@@ -188,6 +228,26 @@ function handleFileSelect(evt) {
 			else
 				reader.readAsDataURL(files[i]);
 			
+		}
+		else if (i == 0 && files[i].type.match('video.*')){
+			handleVideoLoadPre(files[i], function(){
+				var video = this;
+				frameCount = 0;
+				
+				document.body.style.cursor = "auto";
+				handleClipImport(this.duration, true, function (options){
+					document.body.style.cursor = "url(img/aero_derpy_busy.ani), wait";
+					reduceVideoSize(options,video);
+					updateHighestResolution(options.width, options.height,(options.end-options.start)/options.frametime);
+					handleVideoLoad(video, frames[0],options, (progress) => {if (progress >= 1) {
+						check(); URL.revokeObjectURL(video.src);
+						createCanvas(); closeClipImport(); document.body.style.cursor = "auto";
+					}else{
+						document.getElementById("videoImporterProg").innerText=Math.round(progress*100)+"%";
+					}});  
+				});
+			})
+			break;
 		}
 	}
 	mipmaps[0].getContext("2d").clearRect(0,0,width,height);
@@ -261,7 +321,7 @@ function generateCanvas(ccanvas, cwidth, cheight) {
 }
 
 function createCanvas() { // put centered image on canvas
-	if (frames.length == 0)
+	if (frames.length == 0 || frames[0].length == 0)
 		return;
 	mipmapCount = 0;
 	generateCanvas(0, width, height);
@@ -270,10 +330,10 @@ function createCanvas() { // put centered image on canvas
 	var mipheight = getTotalImageHeight();
 	var mipmapsHTML = "";
 	//hasMipmaps = 1;
-	for (var i=2; (width/i>=4) && (height/i>=4); i*=2) {
+	for (var i=2; (width/i>16) && (height/i>16) /*&& (width/i) % 4 == 0 && (height/i) % 4 == 0*/; i*=2) {
 		mipmapCount++;
 		mipmaps.push(document.createElement('canvas'));
-		mipmapsHTML += "<div id=\"inputWrapper"+mipmapCount+"\"></div>\n<canvas class=\"mipmapElement\" id=\"canvasMipmap"+mipmapCount+"\"></canvas><br /><input type=\"file\" id=\"files"+mipmapCount+"\" name=\"files[]\" accept=\"image/*\" onchange=\"changeMipmap(event,"+mipmapCount+")\" multiple/>\n";
+		mipmapsHTML += "<div id=\"inputWrapper"+mipmapCount+"\"></div>\n<canvas class=\"mipmapElement\" id=\"canvasMipmap"+mipmapCount+"\"></canvas><br /><input type=\"file\" id=\"files"+mipmapCount+"\" name=\"files[]\" accept=\"image/*,.tga,video/*\" onchange=\"changeMipmap(event,"+mipmapCount+")\" multiple/>\n";
 	}
 	document.getElementById("mipmaps").innerHTML = mipmapsHTML;
 	for (var i=1; i<=mipmapCount; i++) {
@@ -330,12 +390,12 @@ function changeMipmap(evt,mipmapNumber) { // this code, it scares me
 			reader.fileType = files[i].type;
 			reader.onload = (function(e) {
 					var img = new Image();
-					if (this.fileType == "image/gif"){
+					if (this.fileType == "image/gif" && i == 0){
 						var gif = new SuperGif( {gif: img, auto_play: false});
-						gif.load_raw(new Uint8Array(e.target.result), 
-						function (el) {
-							handleGifLoad(gif, frames[mipmapNumber]);
-							loadMipmaps(mipmapNumber, cwidth, cheight);
+						gif.load_raw(new Uint8Array(e.target.result), function (el) {
+							handleClipImport(gif.get_frames().length, false, function (options){
+								handleGifLoad(gif, frames[mipmapNumber],options); loadMipmaps(mipmapNumber, cwidth, cheight); closeClipImport();
+							});
 						});
 					}
 					else if (this.fileType == "image/x-tga"  || this.fileType == "image/targa"){
@@ -370,6 +430,20 @@ function changeMipmap(evt,mipmapNumber) { // this code, it scares me
 			else
 				reader.readAsDataURL(files[i]);
 		}
+		else if (i == 0 && files[i].type.match('video.*')){
+			handleVideoLoadPre(files[i], function(){
+				var video = this;
+				handleClipImport(this.duration, true, function (options){
+					document.body.style.cursor = "url(img/aero_derpy_busy.ani), wait";
+					reduceVideoSize(options,video);
+					handleVideoLoad(video, frames[mipmapNumber],options, (progress) => {if (progress >= 1) {
+						closeClipImport();loadMipmaps(mipmapNumber, cwidth, cheight); document.body.style.cursor = "auto";
+					}else{
+						document.getElementById("videoImporterProg").innerText=Math.round(progress*100)+"%";
+					}});  
+				});
+			})
+		}
 	}
 }
 
@@ -390,9 +464,9 @@ function loadMipmaps(mipmapNumber, cwidth, cheight) {
 }
 
 function getReducedMipmapCount() {
-	if (reducedMipmaps){
+	/*if (reducedMipmaps){
 		return Math.min(4, mipmapCount);
-	}
+	}*/
 	return mipmapCount;
 }
 function setOutputType(el){
@@ -416,14 +490,24 @@ function setOutputType(el){
 function convertPixels(canvas, fwidth, fheight) {
 	if (shortened)
 		fwidth = fwidth - 4;
-	var outimg = new Int32Array(fwidth*fheight/ (outputType == 13 ? 8 : 4));
+	
+	
 	blockPosition = 0;
+	var isdxt = outputType == 13 || outputType == 15;
+	var origpixels = fwidth*fheight;
+	var outimg;
+	if (isdxt) {
+		outimg = new Int32Array(Math.ceil(fwidth/4)*4*Math.ceil(fheight/4)*4/ (outputType == 13 ? 8 : 4));
+		fwidth = Math.ceil(fwidth/4)*4;
+		fheight = Math.ceil(fheight/4)*4;
+		blockCount += Math.ceil(fwidth/4)*Math.ceil(fheight/4);
+	}
 	for (var d = 0; d< getFrameColumns(); d++){
 		if (getFrameColumns() > 1)
 			var pix = mipmaps[canvas].getContext("2d").getImageData(mipmaps[canvas].width/2/getFrameColumns() - fwidth/2+d*fwidth, 0, fwidth, d == getFrameColumns() -1 ? (frameCount%getFrameRows())*height : getFrameRows()*height);
 		else
 			var pix = mipmaps[canvas].getContext("2d").getImageData(mipmaps[canvas].width/2 - fwidth/2+d*fwidth, 0, fwidth, fheight);
-		if (outputType == 13 || outputType == 15) {
+		if (isdxt) {
 
 			var progressEl= document.getElementById("progress");
 			var quality = parseInt(document.getElementById("dxtquality").value);
@@ -450,9 +534,10 @@ function convertPixels(canvas, fwidth, fheight) {
 			
 			valueTable[canvas] = outimg;
 			var position = 0;
+			
 			for (var j=0; j<pix.height/4; j++) { // rows of blocks
 				for (var i=0; i<fwidth/4; i++) { // columns of blocks
-				blockCount+=1;
+				//blockCount+=1;
 				for (var y = 0; y < 4; y++){
 					for (var x = 0; x < 4; x++){
 						position = x*4+(16*i)+(fwidth*16*j)+(fwidth*4*y);
@@ -526,7 +611,7 @@ function createVTF() {
 	}
 	var file = new Uint8Array(size+64);
 	console.log("save: "+width+" "+height+" "+ size);
-	var header = [86,84,70,0,7,0,0,0,1,0,0,0,64,0,0,0,0,0,0,0,12 + document.getElementById("sampling").value,35-hasMipmaps,0,0,frameCount,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,outputType,0,0,0,hasMipmaps ? getReducedMipmapCount()+1 : 1,13,0,0,0,0,0,1]; // 64B (bare minimum)
+	var header = [86,84,70,0,7,0,0,0,1,0,0,0,64,0,0,0,0,0,0,0,12 + parseInt(document.getElementById("sampling").value),35-hasMipmaps,0,0,frameCount,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,outputType,0,0,0,hasMipmaps ? getReducedMipmapCount()+1 : 1,13,0,0,0,0,0,1]; // 64B (bare minimum)
 	writeShort(header,16, shortened ? width - 4 : width);
 	writeShort(header,18, height);
 	writeShort(header,24, frameCount);
@@ -536,6 +621,7 @@ function createVTF() {
 	if (outputType == 13 || outputType == 15) {
 		var pos = 64;
 		for (var i = valueTable.length-1; i >= 0; i--){
+			console.log("value "+i);
 			var table = valueTable[i];
 			for (var j = 0; j < table.length; j++) {
 				writeInt(file,pos, table[j],4);
@@ -614,10 +700,7 @@ function getEstFileSize(cmipmaps) {
 		mult = 2;
 	}
 	if (cmipmaps && document.getElementById("mipmapsCheck").checked) {
-		if (reducedMipmaps)
-			mult *= 1.33203125;
-		else
-			mult *= 1+ (1/3);
+		mult *= 1.33203125;
 	}
 	return (shortened ? width - 4 : width) * getTotalImageHeight() * mult + 64;
 }
@@ -649,27 +732,33 @@ function getHue(red, green, blue){
 	return hue;
 }
 
-function handleGifLoad(gif, cframes) {
+function handleGifLoad(gif, cframes,options) {
 	singleImageAnim = false;
 	var time = 0;
-	for (var j = 0; j < gif.get_frames().length; j++){
+	var frametime = options.frametime * 100;
+
+	var cancelPressed = false;
+	for (var j = options.start; j < options.end; j++){
 		var canvas = document.createElement('canvas');
 		canvas.width = gif.get_hdr().width;
 		canvas.height = gif.get_hdr().height;
 		canvas.getContext('2d').putImageData(gif.get_frames()[j].data,0,0);
-		var am = Math.floor((time + gif.get_frames()[j].delay) / 20) - Math.floor(time  / 20);
-		if (!document.getElementById("gifCheck").checked)
+		var am = Math.ceil((time + gif.get_frames()[j].delay) / frametime) - Math.ceil(time  / frametime);
+		if (options.allFrames)
 			am = 1;
 		for (var k = 0; k < am; k++){
 			if (cframes == frames[0]){
 				imagesLoaded++;
 				frameCount++;
-				if (getEstFileSize() / 1024 > 513){
+				if (!autores && !cancelPressed && getEstFileSize() / 1024 > 513){
 					if(window.confirm("The remaining "+(gif.get_frames().length - j)+
-					" frames will be skipped as it would exceed the frame limit. Press Cancel to preserve all frames")){
+					" frames are skipped as they would exceed the frame limit. Press Cancel to preserve all frames")){
 						imagesLoaded--;
 						frameCount--;
 						return;
+					}
+					else{
+						cancelPressed = true;
 					}
 				}
 			}
@@ -681,6 +770,134 @@ function handleGifLoad(gif, cframes) {
 	}
 }
 
+function handleVideoLoadPre(file, onLoad) {
+	var video = document.createElement("video");
+	video.src = URL.createObjectURL(file);
+	video.addEventListener('loadedmetadata', onLoad);
+	
+	
+	return video;
+}
+
+function handleVideoLoad(video, cframes, options, onprogress) {
+	singleImageAnim = false;
+	video.currentTime=options.start;
+	var framesc = (options.end-options.start)/options.frametime;
+	var cancelPressed = false;
+	video.addEventListener('timeupdate',function () {
+		this.pause();
+		if (frameCount/framesc >= 1){
+			return;
+		}
+		console.log(this.currentTime);
+		var canvas = document.createElement('canvas');
+		canvas.width = options.width;
+		canvas.height = options.height;
+		canvas.getContext('2d').drawImage(video,0,0,options.width,options.height);
+		
+		if (cframes == frames[0]){
+			imagesLoaded++;
+			frameCount++;
+			
+			if (!autores && !cancelPressed && getEstFileSize() / 1024 > 513){
+				if(window.confirm("The remaining frames are skipped as they would exceed the frame limit. Press Cancel to preserve all frames")){
+					imagesLoaded--;
+					frameCount--;
+					framesc=frameCount;
+					onprogress(frameCount/framesc);
+					return;
+				}
+				else{
+					cancelPressed = true;
+				}
+			}
+		}
+		else if (cframes.length >= frameCount){
+			framesc=frameCount;
+			onprogress(frameCount/framesc);
+			return;
+		}
+		cframes.push(canvas);
+		onprogress(frameCount/framesc);
+		if (fastSeekEnabled)
+			video.fastSeek(video.currentTime+options.frametime);
+		else
+			video.currentTime+=options.frametime;
+	});
+	
+	video.play();
+	return video;
+}
+
+function handleClipImport(length, usetime, clipAccept) {
+	document.getElementById("videoImporterAccept").disabled=false;
+	document.getElementById("main").style.display="none";
+	document.getElementById("videoImporter").style.display="block";
+	document.getElementById("startTimeIn").value=0;
+	document.getElementById("endTimeIn").value=length;
+	document.getElementById("videoImporterProg").innerText="";
+	if (usetime){
+		document.getElementById("startTimeLb").innerText="Start time in seconds:"
+		document.getElementById("endTimeLb").innerText="End time in seconds:"
+		document.getElementById("videoImporterNotice").style.display="block";
+		document.getElementById("allFramesIn").style.display="none";
+		document.getElementById("allFramesLb").style.display="none";
+	}
+	else{
+		document.getElementById("startTimeLb").innerText="Start frame:"
+		document.getElementById("endTimeLb").innerText="End frame:"
+		document.getElementById("videoImporterNotice").style.display="none";
+		document.getElementById("allFramesIn").style.display="inline";
+		document.getElementById("allFramesLb").style.display="inline";
+	}
+	document.getElementById("fpsIn").value=1;
+	onImportClipAccept = clipAccept;
+}
+
+function clipImport() {
+	this.disabled = true;
+	var options = {};
+	options.start=parseFloat(document.getElementById("startTimeIn").value);
+	options.end=parseFloat(document.getElementById("endTimeIn").value);
+	options.frametime=parseFloat(document.getElementById("fpsIn").value)/5;
+	options.allFrames=document.getElementById("allFramesIn").checked;
+	onImportClipAccept(options);
+	
+}
+
+function closeClipImport(){
+	document.getElementById("main").style.display="block";
+	document.getElementById("videoImporter").style.display="none";
+}
+
+function reduceVideoSize(options,video){
+	var maxres=8192;
+	var framesc = (options.end-options.start)/options.frametime;
+	if (framesc > 8192){
+		maxres=16;
+	}
+	else if (framesc > 2048){
+		maxres=32;
+	}
+	else if (framesc > 512){
+		maxres=64;
+	}
+	else if (framesc > 128){
+		maxres=128;
+	}
+	else if (framesc > 32){
+		maxres=256;
+	}
+	else if (framesc > 8){
+		maxres=512;
+	}
+	else if (framesc > 2){
+		maxres=1024;
+	}
+	var scale=Math.min(1,maxres/Math.max(video.videoWidth,video.videoHeight));
+	options.width=video.videoWidth*scale;
+	options.height=video.videoHeight*scale;
+}
 function restoreAlpha(alpha1, alpha2, num){
 	if (alpha1 > alpha2)
 	switch(num){
@@ -812,4 +1029,47 @@ function getLuminance(red, green, blue){
 		return (0.2126*red*red/255) + (0.7152*green*green/255)+ (0.0722*blue*blue/255);
 	else 
 		return (0.2126*red) + (0.7152*green)+ (0.0722*blue);
+}
+
+function updateHighestResolution(width,height, framesc){
+	var maxres =Math.max(width,height);
+
+	if (framesc > 16384 && maxres > 4){
+		maxres=4;
+	}
+	else if (framesc > 4096 && maxres > 8){
+		maxres=8;
+	}
+	else if (framesc > 1024 && maxres > 16){
+		maxres=16;
+	}
+	else if (framesc > 256 && maxres > 32){
+		maxres=32;
+	}
+	else if (framesc > 64 && maxres > 64){
+		maxres=64;
+	}
+	else if (framesc > 16 && maxres > 128){
+		maxres=128;
+	}
+	else if (framesc > 4 && maxres > 256){
+		maxres=256;
+	}
+	else if (framesc > 1 && maxres > 512){
+		maxres=512;
+	}
+	for (var i=4;i <= 1024; i*=2){
+		if (i >= maxres || i == 1024) {
+			largestResolution = i;
+			break;
+		}
+	}
+	if (autores)
+		setResolution();
+}
+
+function downloadVMT(){
+	var vmtName = prompt("Enter name of the spray");
+	var vmtFileText = document.getElementById('vmtData').innerHTML.replace('"vgui/logos/spray"','"vgui/logos/'+vmtName+'"');
+	download(vmtFileText, vmtName+".vmt");
 }
