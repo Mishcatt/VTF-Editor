@@ -152,6 +152,7 @@ function handleFileSelect(evt) {
 	var files = evt.target.files; // FileList object
 	if (files.length == 0)
 		return;
+  document.getElementById('outputFilename').value = 'spray';
 	document.getElementById('convertButton').disabled = true;
 	document.getElementById('saveButton').disabled = true;
 	document.getElementById('files0').disabled = true;
@@ -681,7 +682,7 @@ function createVTF() {
 			}
 		}
 	}
-	download(file, "spray.vtf")
+	download(file, "vtf");
 }
 
 //Utils
@@ -1002,9 +1003,16 @@ function reduceColors(data, rb, gb, bb, ab, dith) {
     // context.putImageData(png, 0, 0);
 }
 // Function to download data to a file
-function download(data, filename) {
+function download(data, extension) {
+    var nameField = document.getElementById("outputFilename");
+    if (!nameField.validity.valid) {
+      alert("Filename contains invalid characters");
+      return;
+    }
     var a = document.createElement("a"),
-        file = new Blob([data], {type: "application/octet-stream"});
+        file = new Blob([data], {type: "application/octet-stream"}),
+        name = nameField.value || "spray",
+        filename = name + "." + extension;
     if (window.navigator.msSaveOrOpenBlob) // IE10+
         window.navigator.msSaveOrOpenBlob(file, filename);
     else { // Others
@@ -1069,7 +1077,14 @@ function updateHighestResolution(width,height, framesc){
 }
 
 function downloadVMT(){
-	var vmtName = prompt("Enter name of the spray");
-	var vmtFileText = document.getElementById('vmtData').innerHTML.replace('"vgui/logos/spray"','"vgui/logos/'+vmtName+'"');
-	download(vmtFileText, vmtName+".vmt");
+	var vmtName = document.getElementById("outputFilename").value;
+	var vmtFileText = `"UnlitGeneric"
+{
+	"$basetexture"	"vgui/logos/${vmtName}"
+	"$translucent" "1"
+	"$ignorez" "1"
+	"$vertexcolor" "1"
+	"$vertexalpha" "1"
+}`;
+	download(vmtFileText, "vmt");
 }

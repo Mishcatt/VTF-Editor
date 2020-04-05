@@ -114,6 +114,8 @@ Sampling Method: <select class="textInput" value="0" id="sampling">
 </div>
 <p id="progress"></p>
 <br /><br />
+Filename: <input type="text" name="outputFilename" id="outputFilename" value="spray" pattern="[^\\/:\x22*?<>|]+">
+<br /><br />
 <button id="convertButton" type="button" onclick="convert()" disabled>Convert</button> &nbsp; 
 <button id="saveButton" type="button" onclick="createVTF()" disabled>Save as VTF</button> &nbsp;
 <button id="saveButtonVMT" type="button" onclick="downloadVMT()" disabled>Save VMT</button><br />
@@ -153,14 +155,6 @@ changelog:<br />
 </div>
 
 </div>
-<pre id="vmtData" style="display: none">"UnlitGeneric"
-{
-	"$basetexture"	"vgui/logos/spray"
-	"$translucent" "1"
-	"$ignorez" "1"
-	"$vertexcolor" "1"
-	"$vertexalpha" "1"
-}</pre>
 <script src="tga.js" type="text/javascript"></script>
 <script src="libgif.js" type="text/javascript"></script>
 <script src="dither.js" type="text/javascript"></script>
