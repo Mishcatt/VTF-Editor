@@ -79,7 +79,7 @@ To download final spray click "Save as VTF".<br /><br />
 	<option value=custom>custom</option>
 </datalist>
 <br />
-<input type="checkbox" name="mipmaps" id="mipmapsCheck" disabled onclick="mipmapclick = true" onchange="showMipmap(this)">Generate Mipmaps<br />
+<input type="checkbox" name="mipmaps" id="mipmapsCheck" disabled onclick="mipmapclick = true" onchange="onPropertyChange()">Generate Mipmaps<br />
 <input type="checkbox" name="rescale" id="rescaleCheck" onchange="setResolution()" checked>Scale to fit<br />
 
 <input type="checkbox" name="singleFrame" id="singleFrame" onchange="setSingleFrame()">Use single image for animation<br />
@@ -101,10 +101,10 @@ Sampling Method: <select class="textInput" value="0" id="sampling">
 	<option value=16>Anisotropic</option>
 </select>
 
-<div id = "ditherBlock"><input type="checkbox" name="dither" id="ditherCheck" checked/>Use dithering</div>
+<div id = "ditherBlock"><input type="checkbox" name="dither" id="ditherCheck" onchange="onPropertyChange()" checked/>Use dithering</div>
 <div id = "dxtSettings" >
 <div class="setting">
-	Compression quality: <select class="textInput" value=2 id="dxtquality">
+	Compression quality: <select class="textInput" value=2 id="dxtquality" onchange="onPropertyChange()">
 		<option value=0>Fast</option>
 		<option value=1>Normal</option>
 		<option value=2 selected>Slow</option>
@@ -116,7 +116,6 @@ Sampling Method: <select class="textInput" value="0" id="sampling">
 <br /><br />
 Filename: <input type="text" name="outputFilename" id="outputFilename" value="spray" pattern="[^\\/:\x22*?<>|]+">
 <br /><br />
-<button id="convertButton" type="button" onclick="convert()" disabled>Convert</button> &nbsp; 
 <button id="saveButton" type="button" onclick="createVTF()" disabled>Save as VTF</button> &nbsp;
 <button id="saveButtonVMT" type="button" onclick="downloadVMT()" disabled>Save VMT</button><br />
 <br />
