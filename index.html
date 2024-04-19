@@ -16,16 +16,15 @@
 Works best with same size images (with transparency or not).<br />
 Smaller images will be centered.<br />
 <p>
-To generate a fading spray enable mipmaps, load a main picture,<br />
+To generate a fading spray: enable mipmaps, load a main picture,<br />
 and then choose another picture under a mipmap of choice.<br />
 </p>
 <p>
-To generate an animated spray select multiple images in the file browser.<br />
+To generate an animated spray: select multiple images in the file browser.<br />
 The frames are displayed in the same order as they appear in the file browser,<br />
-and each one lasts for 0.2s. Animated gifs and videos are also supported.
+and each one lasts for 0.2s. Animated GIFs and video files are also supported.
 </p>
 To download final spray click "Save as VTF".<br /><br />
-<span style="color: #cc3333">Transparency is broken in Linux version of TF2 when using DXT1. Use DXT5 instead!</span><br />
 <div id="resolutionNotice" style="visibility: hidden">Using 1024x1020, no mipmaps</div>
 <select class="textInput" value="auto" id="widthSetting" onchange="setResolution()">
 	<option value=auto>Auto</option>
@@ -91,8 +90,8 @@ Texture format: <select class="textInput" value=13 id="format" onchange="setOutp
 	<option value=4>RGB565</option>
 	<option value=21>BGRA5551</option>
 	<option value=19>BGRA4444</option>
-	<option value=13 selected>DXT1 (One bit alpha)</option>
-	<option value=15>DXT5</option>
+	<option value=13 selected>DXT1 (One bit alpha) (recommended)</option>
+	<option value=15>DXT5 (required for images with transparency)</option>
 </select><br/>
 Sampling Method: <select class="textInput" value="0" id="sampling">
 	<option value=0>Default</option>
@@ -107,7 +106,7 @@ Sampling Method: <select class="textInput" value="0" id="sampling">
 	Compression quality: <select class="textInput" value=2 id="dxtquality" onchange="onPropertyChange()">
 		<option value=0>Fast</option>
 		<option value=1>Normal</option>
-		<option value=2 selected>Slow</option>
+		<option value=2 selected>Slow (recommended)</option>
 		<option value=3>Very slow</option>
 	</select><br/>
 </div>
@@ -117,7 +116,7 @@ Sampling Method: <select class="textInput" value="0" id="sampling">
 Filename: <input type="text" name="outputFilename" id="outputFilename" value="spray" pattern="[^\\/:\x22*?<>|]+">
 <br /><br />
 <button id="saveButton" type="button" onclick="createVTF()" disabled>Save as VTF</button> &nbsp;
-<button id="saveButtonVMT" type="button" onclick="downloadVMT()" disabled>Save VMT</button><br />
+<button id="saveButtonVMT" type="button" onclick="downloadVMT()" disabled>Save as VMT</button><br />
 <br />
 Preview:
 <div id="contentWrapper">
@@ -130,6 +129,7 @@ Preview:
 <div id="mipmaps" style="display: none"></div>
 <br /><br />
 changelog:<br />
+2024-04-19: removed Linux transparency warning due to TF2 64-bit + Vulkan update, plus some wording changes
 2019-09-30: added video import support and better gif support<br/>
 2018-08-19: added animated spray support and new texture formats<br />
 2017-01-05: mipmap generation and modification (fading sprays)<br />
@@ -148,7 +148,7 @@ changelog:<br />
 	<input type="checkbox" name="allFramesIn" id="allFramesIn" onchange="document.getElementById('fpsIn').disabled = this.checked">
 	<span id="allFramesLb">Import all frames</span></br>
 	<button id="videoImporterAccept" type="button" onclick="clipImport()">Import</button><br />
-	<span id="videoImporterNotice">You might need to disable hardware acceleration if import fails, or to improve performance</span>
+	<span id="videoImporterNotice">You might need to disable hardware acceleration if import fails or to improve performance</span>
 	<span id="videoImporterProg"></span></br>
 	
 </div>
