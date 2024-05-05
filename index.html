@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="vtf.css" />
 </head>
 <body>
-<h4>VTF Spray Converter for TF2</h4>
+<h4>VTF Spray Converter for Team Fortress 2</h4>
 <div id = "main">
 <br />
 <input type="file" id="files" name="files[]" accept="image/*,.tga,video/*" onchange="handleFileSelect(event)" multiple/>
@@ -24,7 +24,7 @@ To generate an animated spray: select multiple images in the file browser.<br />
 The frames are displayed in the same order as they appear in the file browser,<br />
 and each one lasts for 0.2s. Animated GIFs and video files are also supported.
 </p>
-To download final spray click "Save as VTF".<br /><br />
+To download the final result as a spray, click the "Save as VTF" button.<br /><br />
 <div id="resolutionNotice" style="visibility: hidden">Using 1024x1020, no mipmaps</div>
 <select class="textInput" value="auto" id="widthSetting" onchange="setResolution()">
 	<option value=auto>Auto</option>
@@ -90,12 +90,12 @@ Texture format: <select class="textInput" value=13 id="format" onchange="setOutp
 	<option value=4>RGB565</option>
 	<option value=21>BGRA5551</option>
 	<option value=19>BGRA4444</option>
-	<option value=13 selected>DXT1 (One bit alpha) (recommended)</option>
-	<option value=15>DXT5 (required for images with transparency)</option>
+	<option value=13 selected>DXT1 (one-bit alpha) (recommended)</option>
+	<option value=15>DXT5 (eight-bit alpha) (required for images with transparency)</option>
 </select><br/>
-Sampling Method: <select class="textInput" value="0" id="sampling">
-	<option value=0>Default</option>
-	<option value=1>Point (Pixel art)</option>
+Sampling method: <select class="textInput" value="0" id="sampling">
+	<option value=0>Default (recommended)</option>
+	<option value=1>Point (for pixel arts)</option>
 	<option value=2>Trilinear</option>
 	<option value=16>Anisotropic</option>
 </select>
@@ -113,7 +113,7 @@ Sampling Method: <select class="textInput" value="0" id="sampling">
 </div>
 <p id="progress"></p>
 <br /><br />
-Filename: <input type="text" name="outputFilename" id="outputFilename" value="spray" pattern="[^\\/:\x22*?<>|]+">
+File name (without extension): <input type="text" name="outputFilename" id="outputFilename" value="spray" pattern="[^\\/:\x22*?<>|]+">
 <br /><br />
 <button id="saveButton" type="button" onclick="createVTF()" disabled>Save as VTF</button> &nbsp;
 <button id="saveButtonVMT" type="button" onclick="downloadVMT()" disabled>Save as VMT</button><br />
@@ -128,7 +128,8 @@ Preview:
 <input type="file" id="files0" name="files[]" accept="image/*,.tga,video/*" onchange="changeMipmap(event,0)" disabled multiple/>
 <div id="mipmaps" style="display: none"></div>
 <br /><br />
-changelog:<br />
+Changelog:<br /><br />
+2024-05-05: extra wording changes, added warning about file name extension<br />
 2024-04-19: removed Linux transparency warning due to TF2 64-bit + Vulkan update, plus some wording changes<br />
 2019-09-30: added video import support and better gif support<br/>
 2018-08-19: added animated spray support and new texture formats<br />
@@ -148,7 +149,7 @@ changelog:<br />
 	<input type="checkbox" name="allFramesIn" id="allFramesIn" onchange="document.getElementById('fpsIn').disabled = this.checked">
 	<span id="allFramesLb">Import all frames</span></br>
 	<button id="videoImporterAccept" type="button" onclick="clipImport()">Import</button><br />
-	<span id="videoImporterNotice">You might need to disable hardware acceleration if import fails or to improve performance</span>
+	<span id="videoImporterNotice">You might need to disable hardware acceleration in your browser if import fails or to improve performance.</span>
 	<span id="videoImporterProg"></span></br>
 	
 </div>
